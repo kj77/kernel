@@ -383,6 +383,7 @@ enum msm_vfe_reg_cfg_type {
 	VFE_READ_DMI_16BIT,
 	VFE_READ_DMI_32BIT,
 	VFE_READ_DMI_64BIT,
+	GET_SOC_HW_VER,
 	GET_MAX_CLK_RATE,
 	GET_CLK_RATES,
 	GET_ISP_ID,
@@ -568,6 +569,7 @@ struct msm_isp_event_data {
 	struct timeval timestamp;
 	/* Monotonic timestamp since bootup */
 	struct timeval mono_timestamp;
+	enum msm_vfe_input_src input_intf;
 	uint32_t frame_id;
 	union {
 		struct msm_isp_stats_event stats;

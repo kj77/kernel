@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -29,12 +29,6 @@
 #define CPP_HW_VERSION_1_1_0  0x10010000
 #define CPP_HW_VERSION_1_1_1  0x10010001
 #define CPP_HW_VERSION_2_0_0  0x20000000
-#define CPP_HW_VERSION_4_0_0  0x40000000
-#define CPP_HW_VERSION_4_1_0  0x40010000
-#define CPP_HW_VERSION_5_0_0  0x50000000
-#define CPP_HW_VERSION_5_1_0  0x50010000
-
-#define VBIF_VERSION_2_3_0  0x20030000
 
 #define MAX_ACTIVE_CPP_INSTANCE 8
 #define MAX_CPP_PROCESSING_FRAME 2
@@ -63,7 +57,6 @@
 #define MSM_CPP_CMD_ERROR_REQUEST		0x9
 #define MSM_CPP_CMD_GET_STATUS			0xA
 #define MSM_CPP_CMD_GET_FW_VER			0xB
-#define MSM_CPP_CMD_GROUP_BUFFER		0x12
 
 #define MSM_CPP_MSG_ID_CMD          0x3E646D63
 #define MSM_CPP_MSG_ID_OK           0x0A0A4B4F
@@ -89,8 +82,6 @@
 #define MSM_CPP_POLL_RETRIES		200
 #define MSM_CPP_TASKLETQ_SIZE		16
 #define MSM_CPP_TX_FIFO_LEVEL		16
-#define MSM_CPP_RX_FIFO_LEVEL		512
-#define MSM_CPP_GROUP_CMD_LEN		69
 
 struct cpp_subscribe_info {
 	struct v4l2_fh *vfh;
@@ -102,11 +93,6 @@ enum cpp_state {
 	CPP_STATE_IDLE,
 	CPP_STATE_ACTIVE,
 	CPP_STATE_OFF,
-};
-
-enum cpp_iommu_state {
-	CPP_IOMMU_STATE_DETACHED,
-	CPP_IOMMU_STATE_ATTACHED,
 };
 
 enum msm_queue {
@@ -152,7 +138,7 @@ struct msm_cpp_tasklet_queue_cmd {
 
 struct msm_cpp_buffer_map_info_t {
 	unsigned long len;
-	dma_addr_t phy_addr;
+	unsigned long phy_addr;
 	struct ion_handle *ion_handle;
 	struct msm_cpp_buffer_info_t buff_info;
 };
@@ -192,7 +178,6 @@ struct cpp_device {
 	struct regulator *fs_cpp;
 	struct mutex mutex;
 	enum cpp_state state;
-	enum cpp_iommu_state iommu_state;
 	uint8_t is_firmware_loaded;
 	char *fw_name_bin;
 	struct workqueue_struct *timer_wq;
@@ -200,15 +185,12 @@ struct cpp_device {
 	uint32_t fw_version;
 	uint8_t stream_cnt;
 	uint8_t timeout_trial_cnt;
-	uint8_t max_timeout_trial_cnt;
 
 	int domain_num;
 	struct iommu_domain *domain;
 	struct device *iommu_ctx;
 	struct ion_client *client;
 	struct kref refcount;
-	uint32_t num_clk;
-	uint32_t min_clk_rate;
 
 	/* Reusing proven tasklet from msm isp */
 	atomic_t irq_cnt;
@@ -233,23 +215,5 @@ struct cpp_device {
 	struct msm_cpp_buff_queue_info_t *buff_queue;
 	uint32_t num_buffq;
 	struct v4l2_subdev *buf_mgr_subdev;
-
-	uint32_t rd_pntr;
-	uint32_t wr_0_pntr;
-	uint32_t wr_1_pntr;
-	uint32_t wr_2_pntr;
-	uint32_t wr_3_pntr;
-	uint32_t rd_ref_pntr;
-	uint32_t wr_ref_pntr;
-	uint32_t wr_0_meta_data_wr_pntr;
-	uint32_t wr_1_meta_data_wr_pntr;
-	uint32_t wr_2_meta_data_wr_pntr;
-	uint32_t wr_3_meta_data_wr_pntr;
-	uint32_t stripe_base;
-	uint32_t stripe_size;
-	uint32_t stripe_info_offset;
-	uint32_t bus_client;
-	uint32_t bus_idx;
-	uint32_t bus_master_flag;
 };
 #endif /* __MSM_CPP_H__ */

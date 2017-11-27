@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -57,7 +57,7 @@ static void vpe_mem_dump(const char * const name, const void * const addr,
 	p_str = line_str;
 	for (i = 0; i < size/4; i++) {
 		if (i % 4 == 0) {
-			snprintf(p_str, 12, "%p: ", p);
+			snprintf(p_str, 12, "%08x: ", (u32) p);
 			p_str += 10;
 		}
 		data = *p++;
@@ -210,7 +210,7 @@ static unsigned long msm_vpe_queue_buffer_info(struct vpe_device *vpe_dev,
 
 	rc = ion_map_iommu(vpe_dev->client, buff->map_info.ion_handle,
 		vpe_dev->domain_num, 0, SZ_4K, 0,
-		&buff->map_info.phy_addr,
+		(unsigned long *)&buff->map_info.phy_addr,
 		&buff->map_info.len, 0, 0);
 	if (rc < 0) {
 		pr_err("ION mmap failed\n");
@@ -512,6 +512,7 @@ static int vpe_init_hardware(struct vpe_device *vpe_dev)
 	rc = msm_cam_clk_enable(&vpe_dev->pdev->dev, vpe_clk_info,
 				vpe_dev->vpe_clk, ARRAY_SIZE(vpe_clk_info), 1);
 	if (rc < 0) {
+		rc = -ENODEV;
 		pr_err("clk enable failed\n");
 		goto disable_and_put_regulator;
 	}
@@ -530,11 +531,11 @@ static int vpe_init_hardware(struct vpe_device *vpe_dev)
 				"vpe", vpe_dev);
 		if (rc < 0) {
 			pr_err("irq request fail! start=%u\n",
-				(uint32_t) vpe_dev->irq->start);
+				vpe_dev->irq->start);
 			rc = -EBUSY;
 			goto unmap_base;
 		} else {
-			VPE_DBG("Got irq! %d\n", (int)vpe_dev->irq->start);
+			VPE_DBG("Got irq! %d\n", vpe_dev->irq->start);
 		}
 	} else {
 		VPE_DBG("Skip requesting the irq since device is booting\n");
@@ -601,6 +602,7 @@ static int vpe_open_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 		if (rc < 0) {
 			pr_err("%s: Couldn't init vpe hardware\n", __func__);
 			vpe_dev->vpe_open_cnt--;
+			rc = -ENODEV;
 			goto err_fixup_sub_list;
 		}
 		rc = vpe_init_mem(vpe_dev);
@@ -689,48 +691,47 @@ static int msm_vpe_notify_frame_done(struct vpe_device *vpe_dev)
 
 	if (queue->len > 0) {
 		frame_qcmd = msm_dequeue(queue, list_frame);
-		if (!frame_qcmd) {
-			pr_err("%s: %d frame_qcmd is NULL\n",
-				 __func__ , __LINE__);
-			return -EINVAL;
-		}
-		processed_frame = frame_qcmd->command;
-		do_gettimeofday(&(processed_frame->out_time));
-		kfree(frame_qcmd);
-		event_qcmd = kzalloc(sizeof(struct msm_queue_cmd), GFP_ATOMIC);
-		if (!event_qcmd) {
-			pr_err("%s: Insufficient memory\n", __func__);
-			return -ENOMEM;
-		}
-		atomic_set(&event_qcmd->on_heap, 1);
-		event_qcmd->command = processed_frame;
-		VPE_DBG("fid %d\n", processed_frame->frame_id);
-		msm_enqueue(&vpe_dev->eventData_q, &event_qcmd->list_eventdata);
+		if(frame_qcmd) {
+			processed_frame = frame_qcmd->command;
+			do_gettimeofday(&(processed_frame->out_time));
+			kfree(frame_qcmd);
+			event_qcmd = kzalloc(sizeof(struct msm_queue_cmd), GFP_ATOMIC);
+			if (!event_qcmd) {
+				pr_err("%s: Insufficient memory\n", __func__);
+				return -ENOMEM;
+			}
+			atomic_set(&event_qcmd->on_heap, 1);
+			event_qcmd->command = processed_frame;
+			VPE_DBG("fid %d\n", processed_frame->frame_id);
+			msm_enqueue(&vpe_dev->eventData_q, &event_qcmd->list_eventdata);
 
-		if (!processed_frame->output_buffer_info.processed_divert) {
-			memset(&buff_mgr_info, 0 ,
-				sizeof(buff_mgr_info));
-			buff_mgr_info.session_id =
-				((processed_frame->identity >> 16) & 0xFFFF);
-			buff_mgr_info.stream_id =
-				(processed_frame->identity & 0xFFFF);
-			buff_mgr_info.frame_id = processed_frame->frame_id;
-			buff_mgr_info.timestamp = processed_frame->timestamp;
-			buff_mgr_info.index =
-				processed_frame->output_buffer_info.index;
-			rc = msm_vpe_buffer_ops(vpe_dev,
+			if (!processed_frame->output_buffer_info.processed_divert) {
+				memset(&buff_mgr_info, 0 ,
+					sizeof(buff_mgr_info));
+				buff_mgr_info.session_id =
+					((processed_frame->identity >> 16) & 0xFFFF);
+				buff_mgr_info.stream_id =
+					(processed_frame->identity & 0xFFFF);
+				buff_mgr_info.frame_id = processed_frame->frame_id;
+				buff_mgr_info.timestamp = processed_frame->timestamp;
+				buff_mgr_info.index =
+					processed_frame->output_buffer_info.index;
+				rc = msm_vpe_buffer_ops(vpe_dev,
 						VIDIOC_MSM_BUF_MNGR_BUF_DONE,
 						&buff_mgr_info);
-			if (rc < 0) {
-				pr_err("%s: error doing VIDIOC_MSM_BUF_MNGR_BUF_DONE\n",
-					__func__);
-				rc = -EINVAL;
+				if (rc < 0) {
+					pr_err("%s: error doing VIDIOC_MSM_BUF_MNGR_BUF_DONE\n",
+						__func__);
+					rc = -EINVAL;
+				}
 			}
-		}
 
-		v4l2_evt.id = processed_frame->inst_id;
-		v4l2_evt.type = V4L2_EVENT_VPE_FRAME_DONE;
-		v4l2_event_queue(vpe_dev->msm_sd.sd.devnode, &v4l2_evt);
+			v4l2_evt.id = processed_frame->inst_id;
+			v4l2_evt.type = V4L2_EVENT_VPE_FRAME_DONE;
+			v4l2_event_queue(vpe_dev->msm_sd.sd.devnode, &v4l2_evt);
+		}
+		else
+			rc = -EFAULT;
 	}
 	return rc;
 }
@@ -1161,7 +1162,6 @@ static int msm_vpe_cfg(struct vpe_device *vpe_dev,
 	memset(&buff_mgr_info, 0, sizeof(struct msm_buf_mngr_info));
 	buff_mgr_info.session_id = ((new_frame->identity >> 16) & 0xFFFF);
 	buff_mgr_info.stream_id = (new_frame->identity & 0xFFFF);
-	buff_mgr_info.type = MSM_CAMERA_BUF_MNGR_BUF_PLANAR;
 	rc = msm_vpe_buffer_ops(vpe_dev, VIDIOC_MSM_BUF_MNGR_GET_BUF,
 				&buff_mgr_info);
 	if (rc < 0) {
@@ -1225,7 +1225,7 @@ static long msm_vpe_subdev_ioctl(struct v4l2_subdev *sd,
 		struct msm_vpe_transaction_setup_cfg *cfg;
 		VPE_DBG("VIDIOC_MSM_VPE_TRANSACTION_SETUP\n");
 		if (sizeof(*cfg) != ioctl_ptr->len) {
-			pr_err("%s: size mismatch cmd=%d, len=%zu, expected=%zu",
+			pr_err("%s: size mismatch cmd=%d, len=%d, expected=%d",
 				__func__, cmd, ioctl_ptr->len,
 				sizeof(*cfg));
 			rc = -EINVAL;
@@ -1372,11 +1372,8 @@ static long msm_vpe_subdev_ioctl(struct v4l2_subdev *sd,
 		struct msm_vpe_frame_info_t *process_frame;
 		VPE_DBG("VIDIOC_MSM_VPE_GET_EVENTPAYLOAD\n");
 		event_qcmd = msm_dequeue(queue, list_eventdata);
-		if (!event_qcmd) {
-			pr_err("%s: %d event_qcmd is NULL\n",
-				__func__ , __LINE__);
-			return -EINVAL;
-		}
+		if (NULL == event_qcmd)
+			break;
 		process_frame = event_qcmd->command;
 		VPE_DBG("fid %d\n", process_frame->frame_id);
 		if (copy_to_user((void __user *)ioctl_ptr->ioctl_ptr,
@@ -1576,6 +1573,7 @@ static int vpe_probe(struct platform_device *pdev)
 	rc = vpe_init_hardware(vpe_dev);
 	if (rc < 0) {
 		pr_err("%s: Couldn't init vpe hardware\n", __func__);
+		rc = -ENODEV;
 		goto err_unregister_sd;
 	}
 	vpe_reset(vpe_dev);

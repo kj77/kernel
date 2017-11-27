@@ -16,6 +16,8 @@
 
 #define I2C_SEQ_REG_SETTING_MAX   5
 
+#define I2C_USER_REG_DATA_MAX 1024
+
 #define MSM_SENSOR_MCLK_8HZ   8000000
 #define MSM_SENSOR_MCLK_16HZ  16000000
 #define MSM_SENSOR_MCLK_24HZ  24000000
@@ -157,8 +159,9 @@ enum csiphy_cfg_type_t {
 };
 
 enum camera_vreg_type {
-	VREG_TYPE_DEFAULT,
-	VREG_TYPE_CUSTOM,
+	REG_LDO,
+	REG_VS,
+	REG_GPIO,
 };
 
 enum sensor_af_t {

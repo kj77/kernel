@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -32,11 +32,11 @@
 
 #define MSM_POST_EVT_TIMEOUT 5000
 #define MSM_POST_EVT_NOTIMEOUT 0xFFFFFFFF
-#define MSM_CAMERA_STREAM_CNT_BITS  32
 
 struct msm_video_device {
 	struct video_device *vdev;
 	atomic_t opened;
+	atomic_t stream_cnt;
 };
 
 struct msm_queue_head {

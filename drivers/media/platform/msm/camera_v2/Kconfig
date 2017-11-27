@@ -1,8 +1,6 @@
 config MSM_CAMERA_SENSOR
 	    bool "Qualcomm MSM camera sensor support"
 	    depends on MSMB_CAMERA
-	    select NEW_LEDS
-	    select LEDS_CLASS
         ---help---
           This flag enables support for Camera Sensor.
           The sensor driver is capable of providing real time
@@ -58,16 +56,6 @@ config MSM_CSI30_HEADER
           This config macro is required for targets based on
           8064 platforms.
 
-config MSM_CSI31_HEADER
-        bool "Qualcomm MSM CSI 3.1 Header"
-        depends on MSMB_CAMERA
-        ---help---
-          Enable support for CSI drivers to include 3.0
-          header. This header has register macros and its
-          values and bit mask for register configuration bits
-          This config macro is required for targets based on
-          APQ8084 platform.
-
 config MSM_CSIPHY
         bool "Qualcomm MSM Camera Serial Interface Physical receiver support"
         depends on MSMB_CAMERA
@@ -113,14 +101,21 @@ config MSM_ISPIF_V1
           of any CID of MSM_CSI22_HEADER can be routed to of pixel
           or raw data interface in VFE.
 
-config IMX132
-	bool "Sensor IMX132 (BAYER 2M)"
+config IMX134
+	bool "Sensor IMX134 (BAYER 8M)"
 	depends on MSMB_CAMERA
 	---help---
-		Sony 2 MP Bayer Sensor with auto focus, uses
-		2 mipi lanes, preview config = 1920 x 1080 at 30 fps,
-		snapshot config = 1920 x 1080 at 30 fps,
+		Sony 8 MP Bayer Sensor with auto focus, uses
+		4 mipi lanes full resolution @30fps and
+		HFR @60fps and @120fps
 		Video HDR support.
+
+config SONY_CAM_QCAMERA
+	bool "SONY camera"
+	depends on MSMB_CAMERA
+	---help---
+		Enable SONY camera patches.
+		This macro is used for SONY patches.
 
 config OV9724
 	bool "Sensor OV9724 (BAYER 2M)"
@@ -157,23 +152,6 @@ config MT9M114
 		and snapshot. The preview and snapshot resolution shall be
 		1280 * 270. It does not support auto focus. It supports
 		few special effects like saturation.
-config OV5645
-	bool "Sensor OV5645 (YUV 5.0MP)"
-	depends on MSMB_CAMERA
-	---help---
-		OV5645 is Omnivision YUV sensor. It supports 5.0 MP preview
-		and snapshot. The preview and snapshot resolution shall be
-		1280 * 270. It does not support auto focus. It supports
-		few special effects like saturation.
-
-config OV7695
-	bool "Sensor OV7695 (YUV 0.3MP)"
-	depends on MSMB_CAMERA
-	---help---
-		OV7695 is Omnivision YUV sensor. It supports 0.3 MP preview
-		and snapshot. The preview and snapshot resolution shall be
-		VGA. It does not support auto focus. It supports
-		few special effects like saturation.
 
 config SP1628
 	bool "Sensor SP1628 (YUV 720P)"
@@ -184,12 +162,12 @@ config SP1628
 		1280 * 270. It does not support auto focus. It supports
 		few special effects like mono.
 
-config GC0310
-	bool "Sensor GC0310 (YUV .3M)"
+config GC0339
+	bool "Sensor GC0339 (BAYER .3M)"
 	depends on MSMB_CAMERA
 	---help---
-		0310 is a Galaxycore .3 MP YUV Sensor.
-		It supports 1 mipi lane.
+		gc0339 is a Galaxycore .3 MP Bayer Sensor.
+		It supports 1 or 2 mipi lanes.
 		Preview and snapshot resolution shall be 640*480 at 30 fps,
 		It does not support auto focus.
 
@@ -239,7 +217,7 @@ config MSM_V4L2_VIDEO_OVERLAY_DEVICE
 
 config MSMB_JPEG
 	tristate "Qualcomm MSM Jpeg Encoder Engine support"
-        depends on MSMB_CAMERA && (ARCH_MSM8974 || ARCH_MSM8226 || ARCH_APQ8084 || ARCH_MSM8916 || ARCH_MSM)
+	depends on MSMB_CAMERA && (ARCH_MSM8974 || ARCH_MSM8226)
 	---help---
 	  Enable support for Jpeg Encoder/Decoder
 	  Engine for 8974.
@@ -251,9 +229,3 @@ config MSM_GEMINI
 	depends on MSMB_CAMERA && (ARCH_MSM7X30 || ARCH_MSM8X60 || ARCH_MSM8960)
 	---help---
 	  Enables support for the Gemini JPEG encoder engine for 8x60.
-
-config MSM_FD
-	 tristate "Qualcomm MSM FD face detection engine support"
-	 depends on MSMB_CAMERA
-	 ---help---
-	    Enables support for the MSM FD face detection engine.
